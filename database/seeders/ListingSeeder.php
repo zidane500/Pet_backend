@@ -1,0 +1,211 @@
+<?php
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Listing;
+use App\Models\User;
+
+class ListingSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $users = User::all();
+        if ($users->isEmpty()) {
+            $this->command->warn('⚠️ Aucun utilisateur trouvé. Lance UserSeeder d\'abord.');
+            return;
+        }
+
+        $listings = [
+            [
+                'title'         => 'Golden Retriever chiot 3 mois à vendre',
+                'type'          => 'vente',
+                'species'       => 'Chien',
+                'breed'         => 'Golden Retriever',
+                'price'         => 1200,
+                'city'          => 'Tunis',
+                'region'        => 'Tunis',
+                'description'   => 'Magnifique chiot Golden Retriever, 3 mois, vacciné et vermifugé. Parents de race pure. Très sociable et joueur.',
+                'photos'        => ['https://images.unsplash.com/photo-1601979031925-424e53b6caaa?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 22 111 222',
+                'is_premium'    => true,
+            ],
+            [
+                'title'         => 'Chat Persan à adopter — 2 ans',
+                'type'          => 'adoption',
+                'species'       => 'Chat',
+                'breed'         => 'Persan',
+                'price'         => null,
+                'is_free'       => true,
+                'city'          => 'Sfax',
+                'region'        => 'Sfax',
+                'description'   => 'Belle chatte Persane de 2 ans, calme et affectueuse. Stérilisée et à jour des vaccins. Cherche famille aimante.',
+                'photos'        => ['https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => true,
+                'contact_phone' => '+216 25 333 444',
+            ],
+            [
+                'title'         => 'Labrador Retriever — adoption urgente',
+                'type'          => 'adoption',
+                'species'       => 'Chien',
+                'breed'         => 'Labrador',
+                'price'         => null,
+                'is_free'       => true,
+                'city'          => 'Tunis',
+                'region'        => 'Ariana',
+                'description'   => 'Labrador mâle 4 ans, très gentil avec les enfants. Adoption urgente suite à déménagement.',
+                'photos'        => ['https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 28 555 666',
+            ],
+            [
+                'title'         => 'Perruches inséparables couple à vendre',
+                'type'          => 'vente',
+                'species'       => 'Oiseau',
+                'breed'         => 'Inséparables',
+                'price'         => 80,
+                'city'          => 'Sousse',
+                'region'        => 'Sousse',
+                'description'   => 'Couple d\'inséparables 1 an, très attachants. Vendus avec cage et accessoires.',
+                'photos'        => ['https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=400'],
+                'is_vaccinated' => false,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 23 777 888',
+            ],
+            [
+                'title'         => 'Chihuahua femelle 8 mois — vente',
+                'type'          => 'vente',
+                'species'       => 'Chien',
+                'breed'         => 'Chihuahua',
+                'price'         => 900,
+                'city'          => 'Monastir',
+                'region'        => 'Monastir',
+                'description'   => 'Petite Chihuahua très mignonne, 8 mois. Documentée, pucée. Idéale appartement.',
+                'photos'        => ['https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 29 999 000',
+                'is_premium'    => true,
+            ],
+            [
+                'title'         => 'Lapin nain angora blanc à céder',
+                'type'          => 'adoption',
+                'species'       => 'Lapin',
+                'breed'         => 'Angora nain',
+                'price'         => null,
+                'is_free'       => true,
+                'city'          => 'Nabeul',
+                'region'        => 'Nabeul',
+                'description'   => 'Adorable lapin angora blanc, 6 mois. Très docile. Donné avec cage et litière.',
+                'photos'        => ['https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400'],
+                'is_vaccinated' => false,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 24 111 333',
+            ],
+            [
+                'title'         => 'Husky sibérien chiot à vendre',
+                'type'          => 'vente',
+                'species'       => 'Chien',
+                'breed'         => 'Husky Sibérien',
+                'price'         => 2500,
+                'city'          => 'Tunis',
+                'region'        => 'Tunis',
+                'description'   => 'Chiot Husky 2 mois, yeux bleus, très actif. Élevage familial, parents visibles. Pedigree disponible.',
+                'photos'        => ['https://images.unsplash.com/photo-1605568427561-40dd23c2acea?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 21 444 555',
+                'is_premium'    => true,
+            ],
+            [
+                'title'         => 'Tortue Hermann adulte à adopter',
+                'type'          => 'adoption',
+                'species'       => 'Reptile',
+                'breed'         => 'Tortue Hermann',
+                'price'         => null,
+                'is_free'       => true,
+                'city'          => 'Bizerte',
+                'region'        => 'Bizerte',
+                'description'   => 'Tortue Hermann adulte 15 ans, en parfaite santé. Donné avec terrarium équipé.',
+                'photos'        => ['https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?w=400'],
+                'is_vaccinated' => false,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 27 666 777',
+            ],
+            [
+                'title'         => 'Chaton Maine Coon — 3 mois',
+                'type'          => 'vente',
+                'species'       => 'Chat',
+                'breed'         => 'Maine Coon',
+                'price'         => 1500,
+                'city'          => 'Ariana',
+                'region'        => 'Ariana',
+                'description'   => 'Chaton Maine Coon tabby, 3 mois. Parents champions. Vacciné, vermifugé, pucé.',
+                'photos'        => ['https://images.unsplash.com/photo-1615789591457-74a63395c990?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 26 888 999',
+                'is_premium'    => true,
+            ],
+            [
+                'title'         => 'Poissons tropicaux aquarium complet',
+                'type'          => 'vente',
+                'species'       => 'Poisson',
+                'breed'         => 'Tropicaux mixtes',
+                'price'         => 350,
+                'city'          => 'Sfax',
+                'region'        => 'Sfax',
+                'description'   => 'Aquarium 200L complet avec 15 poissons tropicaux, filtre, éclairage LED, décoration.',
+                'photos'        => ['https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?w=400'],
+                'is_vaccinated' => false,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 22 000 111',
+            ],
+            [
+                'title'         => 'Berger Allemand adulte — accouplement',
+                'type'          => 'accouplement',
+                'species'       => 'Chien',
+                'breed'         => 'Berger Allemand',
+                'price'         => 200,
+                'city'          => 'Tunis',
+                'region'        => 'Tunis',
+                'description'   => 'Mâle Berger Allemand 3 ans, pedigree LOF, tempérament excellent. Disponible pour accouplement.',
+                'photos'        => ['https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?w=400'],
+                'is_vaccinated' => true,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 20 222 333',
+            ],
+            [
+                'title'         => 'Couple de canaris chanteurs',
+                'type'          => 'vente',
+                'species'       => 'Oiseau',
+                'breed'         => 'Canari',
+                'price'         => 60,
+                'city'          => 'Sousse',
+                'region'        => 'Sousse',
+                'description'   => 'Couple de canaris adultes, le mâle chante magnifiquement. Vendus avec cage.',
+                'photos'        => ['https://images.unsplash.com/photo-1591198936750-16d8e15edb9e?w=400'],
+                'is_vaccinated' => false,
+                'is_sterilized' => false,
+                'contact_phone' => '+216 23 444 555',
+            ],
+        ];
+
+        $userIds = $users->pluck('id')->toArray();
+
+        foreach ($listings as $i => $l) {
+            Listing::create([
+                ...$l,
+                'user_id'     => $userIds[$i % count($userIds)],
+                'is_active'   => true,
+                'views_count' => rand(5, 500),
+                'expires_at'  => now()->addDays(30),
+            ]);
+        }
+
+        $this->command->info('✅ ' . count($listings) . ' annonces créées');
+    }
+}

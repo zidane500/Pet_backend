@@ -1,48 +1,53 @@
 <?php
-
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'name', 'email', 'password', 'role', 'phone',
+        'city', 'region', 'avatar', 'bio', 'plan',
+        'is_verified', 'is_active', 'locale',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
+    protected $hidden = ['password', 'remember_token'];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_verified' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+    public function listings() {
+        return $this->hasMany(Listing::class);
     }
+    public function animals() {
+        return $this->hasMany(Animal::class);
+    }
+    public function messages() {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+    public function favorites() {
+        return $this->hasMany(Favorite::class);
+    }
+    public function subscription() {
+        return $this->hasOne(Subscription::class)->latestOfMany();
+    }
+    public function vet() {
+        return $this->hasOne(Vet::class);
+    }
+    public function petStore() {
+        return $this->hasOne(PetStore::class);
+    }
+    public function lostFoundReports() {
+    return $this->hasMany(LostFound::class);
+}
 }
