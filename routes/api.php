@@ -30,7 +30,7 @@ Route::get('/pet-stores/{id}',   [PetStoreController::class, 'show']);
 Route::get('/users/{id}',        [UserController::class, 'show']);
 
 // ─── Protégées (token requis) ─────────────────────────────────
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);

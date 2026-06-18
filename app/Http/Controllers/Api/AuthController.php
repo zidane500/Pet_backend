@@ -6,20 +6,15 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
-    {
-        $data = $request->validate([
-            'name'     => 'required|string|max:100',
-            'email'    => 'required|email|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'role'     => 'required|in:owner,vet,shop,shelter,breeder',
-            'phone'    => 'nullable|string|max:20',
-            'city'     => 'nullable|string|max:100',
-        ]);
+    public function register(RegisterRequest $request)
+{
+    $data = $request->validated();
 
         $user = User::create([
             ...$data,
@@ -34,12 +29,9 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
-    {
-        $data = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+    public function login(LoginRequest $request)
+{
+    $data = $request->validated();
 
         $user = User::where('email', $data['email'])->first();
 

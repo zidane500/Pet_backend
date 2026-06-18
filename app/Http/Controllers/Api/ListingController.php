@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Listing;
+use App\Http\Requests\StoreListingRequest;
 use Illuminate\Http\Request;
 
 class ListingController extends Controller
@@ -17,7 +18,6 @@ class ListingController extends Controller
         if ($request->city)    $query->where('city', $request->city);
         if ($request->region)  $query->where('region', $request->region);
         if ($request->search)  $query->where('title', 'ilike', '%'.$request->search.'%');
-
         if ($request->min_price) $query->where('price', '>=', $request->min_price);
         if ($request->max_price) $query->where('price', '<=', $request->max_price);
 
@@ -39,27 +39,16 @@ class ListingController extends Controller
         return response()->json($listing);
     }
 
-    public function store(Request $request)
+    public function store(StoreListingRequest $request)
     {
-        $data = $request->validate([
-            'title'         => 'required|string|max:200',
-            'description'   => 'nullable|string',
-            'type'          => 'required|in:adoption,vente,perdu,trouve,accouplement,conseils',
-            'species'       => 'nullable|string|max:50',
-            'breed'         => 'nullable|string|max:100',
-            'price'         => 'nullable|numeric|min:0',
-            'is_free'       => 'boolean',
-            'city'          => 'nullable|string|max:100',
-            'region'        => 'nullable|string|max:100',
-            'photos'        => 'nullable|array',
-            'photos.*'      => 'string',
-            'contact_phone' => 'nullable|string|max:20',
-            'contact_email' => 'nullable|email',
-            'is_vaccinated' => 'boolean',
-            'is_sterilized' => 'boolean',
-        ]);
+        $data = $request->validated();
 
-        $listing = $request->user()->listings()->create($data);
+        $listing = $request->user()->listings()->create([
+            ...$data,
+            'is_active'   => true,
+            'views_count' => 0,
+            'expires_at'  => now()->addDays(30),
+        ]);
 
         return response()->json($listing, 201);
     }
