@@ -12,11 +12,11 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UploadController;
 
 // ─── Auth publique ────────────────────────────────────────────
-Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login',    [AuthController::class, 'login']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
+Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
+    Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
+    Route::post('/reset-password',  [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
 });
 
 // ─── Publiques (lecture) ──────────────────────────────────────
@@ -53,24 +53,25 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('/lost-found/{id}/resolve', [LostFoundController::class, 'resolve']);
 
     // Messages
-    Route::get('/conversations',              [MessageController::class, 'conversations']);
-    Route::get('/conversations/{userId}',     [MessageController::class, 'show']);
-    Route::post('/messages',                  [MessageController::class, 'store']);
-    Route::patch('/messages/{id}/read',       [MessageController::class, 'markRead']);
+    Route::get('/conversations',              [MessageController::class, 'conversations'])->middleware('throttle:120,1');
+    Route::get('/conversations/{userId}',     [MessageController::class, 'show'])->whereNumber('userId')->middleware('throttle:120,1');
+    Route::post('/messages',                  [MessageController::class, 'store'])->middleware('throttle:20,1');
+    Route::patch('/messages/{id}/read',       [MessageController::class, 'markRead'])->whereNumber('id')->middleware('throttle:60,1');
 
     // Favoris
-    Route::get('/favorites',           [FavoriteController::class, 'index']);
-    Route::post('/favorites',          [FavoriteController::class, 'toggle']);
+    Route::get('/favorites',           [FavoriteController::class, 'index'])->middleware('throttle:120,1');
+    Route::post('/favorites',          [FavoriteController::class, 'toggle'])->middleware('throttle:60,1');
 
     // Avis
     Route::post('/reviews',            [ReviewController::class, 'store']);
     Route::delete('/reviews/{id}',     [ReviewController::class, 'destroy']);
 
     // Notifications
-    Route::get('/notifications',              [UserController::class, 'notifications']);
-    Route::patch('/notifications/{id}/read',  [UserController::class, 'markNotificationRead']);
-    Route::patch('/notifications/read-all',   [UserController::class, 'markAllNotificationsRead']);
+    Route::get('/notifications',              [UserController::class, 'notifications'])->middleware('throttle:120,1');
+    Route::patch('/notifications/{id}/read',  [UserController::class, 'markNotificationRead'])->middleware('throttle:60,1');
+    Route::patch('/notifications/read-all',   [UserController::class, 'markAllNotificationsRead'])->middleware('throttle:30,1');
+    Route::delete('/notifications',           [UserController::class, 'deleteNotifications'])->middleware('throttle:10,1');
 
     // Upload photos
-    Route::post('/upload',             [UploadController::class, 'store']);
+    Route::post('/upload',             [UploadController::class, 'store'])->middleware('throttle:20,1');
 });

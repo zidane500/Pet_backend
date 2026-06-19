@@ -18,8 +18,10 @@ class StoreListingRequest extends FormRequest
         return [
             'title'         => 'required|string|min:5|max:200',
             'type'          => 'required|in:adoption,vente,perdu,trouve,accouplement,conseils',
+            'status'        => 'nullable|in:active,paused,sold,adopted,expired,pending',
             'species'       => 'required|string|max:50',
             'breed'         => 'nullable|string|max:100',
+            'age_months'    => 'nullable|integer|min:0|max:600',
             'price'         => 'nullable|numeric|min:0|max:999999',
             'is_free'       => 'boolean',
             'city'          => 'nullable|string|max:100',
@@ -43,6 +45,8 @@ class StoreListingRequest extends FormRequest
             'type.required'    => 'Le type d\'annonce est obligatoire.',
             'type.in'          => 'Type d\'annonce invalide.',
             'species.required' => 'L\'espèce est obligatoire.',
+            'age_months.integer' => 'L\'âge doit être exprimé en mois.',
+            'age_months.min'     => 'L\'âge ne peut pas être négatif.',
             'price.numeric'    => 'Le prix doit être un nombre.',
             'price.min'        => 'Le prix ne peut pas être négatif.',
             'photos.max'       => 'Maximum 5 photos autorisées.',
@@ -69,6 +73,7 @@ class StoreListingRequest extends FormRequest
             'is_free'       => $this->boolean('is_free'),
             'is_vaccinated' => $this->boolean('is_vaccinated'),
             'is_sterilized' => $this->boolean('is_sterilized'),
+            'age_months'    => $this->filled('age_months') ? (int) $this->input('age_months') : null,
             'title'         => strip_tags($this->title ?? ''),
             'description'   => strip_tags($this->description ?? ''),
         ]);

@@ -11,29 +11,33 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        [
+            'prefix' => 'api',
+            'middleware' => ['api', 'auth:sanctum', 'active', 'throttle:60,1'],
+        ],
+    )
     ->withMiddleware(function (Middleware $middleware) {
 
-        // ─── API stateful (Sanctum) ───────────────────────────────────────
+        // ─── API stateful Sanctum ─────────────────────────────────────────
         $middleware->statefulApi();
-
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
 
         // ─── Middlewares globaux ──────────────────────────────────────────
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
+        // Attention : garde RateLimitApi seulement si tu sais qu’il ne double pas
+        // inutilement les throttles déjà définis sur routes/api.php.
         $middleware->append(\App\Http\Middleware\RateLimitApi::class);
 
         // ─── Aliases ─────────────────────────────────────────────────────
         $middleware->alias([
-            'auth.sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            'active'       => \App\Http\Middleware\CheckUserActive::class,
+            'active' => \App\Http\Middleware\CheckUserActive::class,
         ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
 
-        // ─── 401 Unauthenticated ──────────────────────────────────────────
         $exceptions->render(function (
             \Illuminate\Auth\AuthenticationException $e,
             $request
@@ -41,12 +45,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Non authentifié. Connectez-vous pour continuer.',
-                    'code'    => 'UNAUTHENTICATED',
+                    'code' => 'UNAUTHENTICATED',
                 ], 401);
             }
         });
 
-        // ─── 422 Validation ───────────────────────────────────────────────
         $exceptions->render(function (
             \Illuminate\Validation\ValidationException $e,
             $request
@@ -54,12 +57,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Données invalides.',
-                    'errors'  => $e->errors(),
+                    'errors' => $e->errors(),
                 ], 422);
             }
         });
 
-        // ─── 403 Forbidden ────────────────────────────────────────────────
         $exceptions->render(function (
             \Illuminate\Auth\Access\AuthorizationException $e,
             $request
@@ -67,12 +69,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Action non autorisée.',
-                    'code'    => 'FORBIDDEN',
+                    'code' => 'FORBIDDEN',
                 ], 403);
             }
         });
 
-        // ─── 404 Not Found ────────────────────────────────────────────────
         $exceptions->render(function (
             \Illuminate\Database\Eloquent\ModelNotFoundException $e,
             $request
@@ -80,12 +81,35 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Ressource introuvable.',
-                    'code'    => 'NOT_FOUND',
+                    'code' => 'NOT_FOUND',
                 ], 404);
             }
         });
 
-        // ─── 429 Too Many Requests ────────────────────────────────────────
+        $exceptions->render(function (
+            \Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e,
+            $request
+        ) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Route introuvable.',
+                    'code' => 'ROUTE_NOT_FOUND',
+                ], 404);
+            }
+        });
+
+        $exceptions->render(function (
+            \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e,
+            $request
+        ) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Méthode HTTP non autorisée.',
+                    'code' => 'METHOD_NOT_ALLOWED',
+                ], 405);
+            }
+        });
+
         $exceptions->render(function (
             \Illuminate\Http\Exceptions\ThrottleRequestsException $e,
             $request
@@ -93,22 +117,20 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Trop de requêtes. Réessayez plus tard.',
-                    'code'    => 'TOO_MANY_REQUESTS',
+                    'code' => 'TOO_MANY_REQUESTS',
                 ], 429);
             }
         });
 
-        // ─── 500 Server Error ─────────────────────────────────────────────
         $exceptions->render(function (
             \Throwable $e,
             $request
         ) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                $debug = config('app.debug');
                 return response()->json([
                     'message' => 'Erreur serveur. Réessayez plus tard.',
-                    'code'    => 'SERVER_ERROR',
-                    'detail'  => $debug ? $e->getMessage() : null,
+                    'code' => 'SERVER_ERROR',
+                    'detail' => config('app.debug') ? $e->getMessage() : null,
                 ], 500);
             }
         });

@@ -10,23 +10,64 @@ class ListingController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = min(max((int) $request->input('per_page', 12), 1), 24);
+
         $query = Listing::with('user:id,name,avatar,city,is_verified')
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->where('status', 'active');
 
-        if ($request->type)    $query->where('type', $request->type);
-        if ($request->species) $query->where('species', $request->species);
-        if ($request->city)    $query->where('city', $request->city);
-        if ($request->region)  $query->where('region', $request->region);
-        if ($request->search)  $query->where('title', 'ilike', '%'.$request->search.'%');
-        if ($request->min_price) $query->where('price', '>=', $request->min_price);
-        if ($request->max_price) $query->where('price', '<=', $request->max_price);
+        if ($request->filled('type')) {
+            $query->where('type', $request->input('type'));
+        }
 
-        $listings = $query
-            ->orderByDesc('is_premium')
-            ->orderByDesc('created_at')
-            ->paginate(12);
+        if ($request->boolean('adoptable')) {
+            $query->where('type', 'adoption');
+        }
 
-        return response()->json($listings);
+        if ($request->filled('species')) {
+            $query->where('species', $request->input('species'));
+        }
+
+        if ($request->filled('city')) {
+            $query->where('city', $request->input('city'));
+        }
+
+        if ($request->filled('region')) {
+            $query->where('region', $request->input('region'));
+        }
+
+        if ($request->filled('is_vaccinated')) {
+            $query->where('is_vaccinated', $request->boolean('is_vaccinated'));
+        }
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->input('search') . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'ilike', $search)
+                    ->orWhere('description', 'ilike', $search)
+                    ->orWhere('species', 'ilike', $search)
+                    ->orWhere('breed', 'ilike', $search);
+            });
+        }
+
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', $request->input('min_price'));
+        }
+
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', $request->input('max_price'));
+        }
+
+        $query->orderByDesc('is_premium');
+
+        match ($request->input('sort', 'newest')) {
+            'oldest' => $query->orderBy('created_at'),
+            'priceAsc' => $query->orderByRaw('price IS NULL, price ASC')->orderByDesc('created_at'),
+            'priceDesc' => $query->orderByRaw('price IS NULL, price DESC')->orderByDesc('created_at'),
+            default => $query->orderByDesc('created_at'),
+        };
+
+        return response()->json($query->paginate($perPage));
     }
 
     public function show($id)
@@ -45,6 +86,7 @@ class ListingController extends Controller
 
         $listing = $request->user()->listings()->create([
             ...$data,
+            'status'      => $data['status'] ?? 'active',
             'is_active'   => true,
             'views_count' => 0,
             'expires_at'  => now()->addDays(30),
@@ -60,12 +102,16 @@ class ListingController extends Controller
         $data = $request->validate([
             'title'         => 'sometimes|string|max:200',
             'description'   => 'nullable|string',
+            'type'          => 'sometimes|in:adoption,vente,perdu,trouve,accouplement,conseils',
+            'status'        => 'sometimes|in:active,paused,sold,adopted,expired,pending',
             'price'         => 'nullable|numeric|min:0',
+            'age_months'    => 'nullable|integer|min:0|max:600',
             'city'          => 'nullable|string|max:100',
             'region'        => 'nullable|string|max:100',
             'photos'        => 'nullable|array',
             'contact_phone' => 'nullable|string|max:20',
             'is_active'     => 'boolean',
+            'expires_at'    => 'nullable|date',
         ]);
 
         $listing->update($data);
@@ -83,6 +129,7 @@ class ListingController extends Controller
     public function myListings(Request $request)
     {
         $listings = $request->user()->listings()
+            ->withCount(['favorites', 'messages'])
             ->orderByDesc('created_at')
             ->paginate(10);
 

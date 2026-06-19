@@ -9,6 +9,8 @@ class LostFoundController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = min(max((int) $request->input('per_page', 12), 1), 24);
+
         $query = LostFound::with('user:id,name,avatar')
             ->where('is_resolved', false);
 
@@ -17,7 +19,7 @@ class LostFoundController extends Controller
         if ($request->city)    $query->where('last_seen_location', 'ilike', '%'.$request->city.'%');
 
         return response()->json(
-            $query->orderByDesc('created_at')->paginate(12)
+            $query->orderByDesc('created_at')->paginate($perPage)
         );
     }
 

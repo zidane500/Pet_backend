@@ -9,6 +9,8 @@ class VetController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = min(max((int) $request->input('per_page', 12), 1), 24);
+
         $query = Vet::where('is_active', true);
 
         if ($request->city)   $query->where('city', $request->city);
@@ -24,7 +26,7 @@ class VetController extends Controller
         return response()->json(
             $query->orderByDesc('is_verified')
                   ->orderByDesc('rating')
-                  ->paginate(12)
+                  ->paginate($perPage)
         );
     }
 

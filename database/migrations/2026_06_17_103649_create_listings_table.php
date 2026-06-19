@@ -13,8 +13,10 @@ return new class extends Migration {
             $table->string('title');
             $table->text('description')->nullable();
             $table->enum('type', ['adoption', 'vente', 'perdu', 'trouve', 'accouplement', 'conseils']);
+            $table->enum('status', ['active', 'paused', 'sold', 'adopted', 'expired', 'pending'])->default('active');
             $table->string('species')->nullable();
             $table->string('breed')->nullable();
+            $table->unsignedSmallInteger('age_months')->nullable();
             $table->decimal('price', 10, 2)->nullable();
             $table->boolean('is_free')->default(false);
             $table->string('city')->nullable();

@@ -1,7 +1,10 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreMessageRequest;
+use App\Models\Listing;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,40 +14,79 @@ class MessageController extends Controller
 {
     public function conversations(Request $request)
     {
-        $userId = $request->user()->id;
+        $userId = (int) $request->user()->id;
 
-        $conversations = Message::where('sender_id', $userId)
-            ->orWhere('receiver_id', $userId)
-            ->with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->groupBy(function($msg) use ($userId) {
-                return $msg->sender_id === $userId
-                    ? $msg->receiver_id
-                    : $msg->sender_id;
+        $messages = Message::query()
+            ->where(function ($query) use ($userId) {
+                $query->where('sender_id', $userId)
+                    ->orWhere('receiver_id', $userId);
             })
-            ->map(function($msgs) {
-                return $msgs->first();
+            ->with([
+                'sender:id,name,avatar,is_verified',
+                'receiver:id,name,avatar,is_verified',
+                'listing:id,title,type',
+            ])
+            ->latest()
+            ->limit(500)
+            ->get();
+
+        $conversations = $messages
+            ->groupBy(fn (Message $message) => $message->sender_id === $userId
+                ? $message->receiver_id
+                : $message->sender_id)
+            ->map(function ($thread) use ($userId) {
+                /** @var Message $lastMessage */
+                $lastMessage = $thread->sortByDesc('created_at')->first();
+                $partner = $lastMessage->sender_id === $userId
+                    ? $lastMessage->receiver
+                    : $lastMessage->sender;
+
+                return [
+                    'partner' => $partner,
+                    'last_message' => $lastMessage,
+                    'unread_count' => $thread
+                        ->where('receiver_id', $userId)
+                        ->where('is_read', false)
+                        ->count(),
+                ];
             })
+            ->sortByDesc(fn ($conversation) => $conversation['last_message']->created_at)
             ->values();
 
         return response()->json($conversations);
     }
 
-    public function show(Request $request, $userId)
+    public function show(Request $request, int $userId)
     {
-        $me = $request->user()->id;
+        $me = (int) $request->user()->id;
 
-        $messages = Message::where(function($q) use ($me, $userId) {
-            $q->where('sender_id', $me)->where('receiver_id', $userId);
-        })->orWhere(function($q) use ($me, $userId) {
-            $q->where('sender_id', $userId)->where('receiver_id', $me);
-        })
-        ->with(['sender:id,name,avatar'])
-        ->orderBy('created_at')
-        ->get();
+        if ($me === $userId) {
+            return response()->json([
+                'message' => 'Conversation invalide.',
+                'code' => 'INVALID_CONVERSATION',
+            ], 422);
+        }
 
-        Message::where('sender_id', $userId)
+        User::query()->whereKey($userId)->where('is_active', true)->firstOrFail();
+
+        $messages = Message::query()
+            ->where(function ($query) use ($me, $userId) {
+                $query->where('sender_id', $me)->where('receiver_id', $userId);
+            })
+            ->orWhere(function ($query) use ($me, $userId) {
+                $query->where('sender_id', $userId)->where('receiver_id', $me);
+            })
+            ->with([
+                'sender:id,name,avatar,is_verified',
+                'receiver:id,name,avatar,is_verified',
+                'listing:id,title,type',
+            ])
+            ->oldest()
+            ->limit(250)
+            ->get();
+
+        Message::query()
+            ->where('sender_id', $userId)
             ->where('receiver_id', $me)
             ->where('is_read', false)
             ->update(['is_read' => true, 'read_at' => now()]);
@@ -52,31 +94,51 @@ class MessageController extends Controller
         return response()->json($messages);
     }
 
-    public function store(Request $request)
+    public function store(StoreMessageRequest $request)
     {
-        $data = $request->validate([
-            'receiver_id' => 'required|exists:users,id',
-            'content'     => 'required|string|max:2000',
-            'listing_id'  => 'nullable|exists:listings,id',
-        ]);
+        $data = $request->validated();
 
-        $message = Message::create([
-            'sender_id'   => $request->user()->id,
-            'receiver_id' => $data['receiver_id'],
-            'content'     => $data['content'],
-            'listing_id'  => $data['listing_id'] ?? null,
-        ]);
+        $receiver = User::query()
+            ->whereKey($data['receiver_id'])
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        if (! empty($data['listing_id'])) {
+            Listing::query()
+                ->whereKey($data['listing_id'])
+                ->where('is_active', true)
+                ->firstOrFail();
+        }
+
+        $message = DB::transaction(function () use ($request, $data, $receiver) {
+            return Message::query()->create([
+                'sender_id' => $request->user()->id,
+                'receiver_id' => $receiver->id,
+                'content' => $data['content'],
+                'listing_id' => $data['listing_id'] ?? null,
+            ]);
+        });
 
         return response()->json(
-            $message->load('sender:id,name,avatar'),
+            $message->load([
+                'sender:id,name,avatar,is_verified',
+                'receiver:id,name,avatar,is_verified',
+                'listing:id,title,type',
+            ]),
             201
         );
     }
 
-    public function markRead(Request $request, $id)
+    public function markRead(Request $request, int $id)
     {
-        $message = Message::where('receiver_id', $request->user()->id)->findOrFail($id);
-        $message->update(['is_read' => true, 'read_at' => now()]);
-        return response()->json(['message' => 'Lu.']);
+        $message = Message::query()
+            ->where('receiver_id', $request->user()->id)
+            ->findOrFail($id);
+
+        if (! $message->is_read) {
+            $message->update(['is_read' => true, 'read_at' => now()]);
+        }
+
+        return response()->json(['message' => 'Message lu.']);
     }
 }

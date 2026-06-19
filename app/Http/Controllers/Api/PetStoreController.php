@@ -9,6 +9,8 @@ class PetStoreController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = min(max((int) $request->input('per_page', 12), 1), 24);
+
         $query = PetStore::where('is_active', true);
 
         if ($request->city)   $query->where('city', $request->city);
@@ -18,7 +20,7 @@ class PetStoreController extends Controller
         return response()->json(
             $query->orderByDesc('is_verified')
                   ->orderByDesc('rating')
-                  ->paginate(12)
+                  ->paginate($perPage)
         );
     }
 

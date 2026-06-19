@@ -10,8 +10,8 @@ class Listing extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'user_id', 'animal_id', 'title', 'description', 'type',
-        'species', 'breed', 'price', 'is_free', 'city', 'region',
+        'user_id', 'animal_id', 'title', 'description', 'type', 'status',
+        'species', 'breed', 'age_months', 'price', 'is_free', 'city', 'region',
         'photos', 'contact_phone', 'contact_email',
         'is_vaccinated', 'is_sterilized', 'is_premium',
         'is_active', 'views_count', 'expires_at',
@@ -25,6 +25,7 @@ class Listing extends Model
         'is_premium' => 'boolean',
         'is_active' => 'boolean',
         'price' => 'decimal:2',
+        'age_months' => 'integer',
         'expires_at' => 'datetime',
     ];
 
