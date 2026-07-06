@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Listing;
 use App\Http\Requests\StoreListingRequest;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class ListingController extends Controller
 {
@@ -61,10 +62,10 @@ class ListingController extends Controller
         $query->orderByDesc('is_premium');
 
         match ($request->input('sort', 'newest')) {
-            'oldest' => $query->orderBy('created_at'),
-            'priceAsc' => $query->orderByRaw('price IS NULL, price ASC')->orderByDesc('created_at'),
+            'oldest'    => $query->orderBy('created_at'),
+            'priceAsc'  => $query->orderByRaw('price IS NULL, price ASC')->orderByDesc('created_at'),
             'priceDesc' => $query->orderByRaw('price IS NULL, price DESC')->orderByDesc('created_at'),
-            default => $query->orderByDesc('created_at'),
+            default     => $query->orderByDesc('created_at'),
         };
 
         return response()->json($query->paginate($perPage));
@@ -80,7 +81,7 @@ class ListingController extends Controller
         return response()->json($listing);
     }
 
-    public function store(StoreListingRequest $request)
+    public function store(StoreListingRequest $request): JsonResponse
     {
         $data = $request->validated();
 
@@ -95,7 +96,7 @@ class ListingController extends Controller
         return response()->json($listing, 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(StoreListingRequest $request, int $id): JsonResponse
     {
         $listing = Listing::where('user_id', $request->user()->id)->findOrFail($id);
 

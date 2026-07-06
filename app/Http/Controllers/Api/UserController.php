@@ -3,7 +3,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Message;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use App\Http\Requests\UpdateProfileRequest;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -17,29 +20,48 @@ class UserController extends Controller
         return response()->json($user->makeHidden(['email', 'phone']));
     }
 
-    public function update(Request $request)
+    public function update(UpdateProfileRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name'         => 'sometimes|string|max:100',
-            'phone'        => 'nullable|string|max:20',
-            'city'         => 'nullable|string|max:100',
-            'region'       => 'nullable|string|max:100',
-            'bio'          => 'nullable|string|max:500',
-            'avatar'       => 'nullable|string',
-            'locale'       => 'nullable|in:fr,en,ar',
-            'password'     => 'nullable|string|min:6|confirmed',
-        ]);
+        $user = $request->user();
 
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
+        // ── Changement de mot de passe ─────────────────────────
+        if ($request->filled('password')) {
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'message' => 'Données invalides.',
+                    'errors'  => [
+                        'current_password' => ['Mot de passe actuel incorrect.'],
+                    ],
+                ], 422);
+            }
+            $user->password = Hash::make($request->password);
         }
 
-        $request->user()->update($data);
+        // ── Champs profil de base ──────────────────────────────
+        $user->fill($request->only([
+            'name', 'phone', 'city', 'region',
+            'bio', 'avatar', 'locale',
+        ]));
 
-        return response()->json($request->user()->fresh());
+        // ── Préférences notifications (JSON) ───────────────────
+        if ($request->has('notification_preferences')) {
+            $user->notification_preferences = $request->notification_preferences;
+        }
+
+        // ── Préférences confidentialité (JSON) ─────────────────
+        if ($request->has('privacy')) {
+            $user->privacy = $request->privacy;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil mis à jour.',
+            'user'    => $user->fresh(),
+        ]);
     }
 
-    public function dashboard(Request $request)
+    public function dashboard(Request $request): JsonResponse
     {
         $user = $request->user();
 
@@ -50,9 +72,8 @@ class UserController extends Controller
             ->get();
 
         $viewsByListing = $recentListings
-            ->take(5)
             ->map(fn ($listing) => [
-                'day' => mb_strlen($listing->title) > 18
+                'day'   => mb_strlen($listing->title) > 18
                     ? mb_substr($listing->title, 0, 18) . '…'
                     : $listing->title,
                 'views' => (int) $listing->views_count,
@@ -62,10 +83,9 @@ class UserController extends Controller
         $messagesByDay = collect(range(6, 0))
             ->map(function ($daysAgo) use ($user) {
                 $date = now()->subDays($daysAgo);
-
                 return [
-                    'day' => $date->locale('fr')->isoFormat('dd'),
-                    'count' => \App\Models\Message::where('receiver_id', $user->id)
+                    'day'   => $date->locale('fr')->isoFormat('dd'),
+                    'count' => Message::where('receiver_id', $user->id)
                         ->whereDate('created_at', $date->toDateString())
                         ->count(),
                 ];
@@ -75,10 +95,14 @@ class UserController extends Controller
         return response()->json([
             'user'                 => $user,
             'listings_count'       => $user->listings()->count(),
-            'active_listings'      => $user->listings()->where('is_active', true)->where('status', 'active')->count(),
+            'active_listings'      => $user->listings()
+                                          ->where('is_active', true)
+                                          ->where('status', 'active')
+                                          ->count(),
             'total_views'          => $user->listings()->sum('views_count'),
-            'unread_messages'      => \App\Models\Message::where('receiver_id', $user->id)
-                                        ->where('is_read', false)->count(),
+            'unread_messages'      => Message::where('receiver_id', $user->id)
+                                          ->where('is_read', false)
+                                          ->count(),
             'favorites_count'      => $user->favorites()->count(),
             'unread_notifications' => $user->unreadNotifications()->count(),
             'recent_listings'      => $recentListings,
@@ -87,7 +111,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function notifications(Request $request)
+    public function notifications(Request $request): JsonResponse
     {
         $perPage = min(max((int) $request->integer('per_page', 20), 1), 50);
 
@@ -99,7 +123,7 @@ class UserController extends Controller
         );
     }
 
-    public function markNotificationRead(Request $request, string $id)
+    public function markNotificationRead(Request $request, string $id): JsonResponse
     {
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
@@ -107,14 +131,14 @@ class UserController extends Controller
         return response()->json(['message' => 'Notification lue.']);
     }
 
-    public function markAllNotificationsRead(Request $request)
+    public function markAllNotificationsRead(Request $request): JsonResponse
     {
         $request->user()->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json(['message' => 'Toutes les notifications sont lues.']);
     }
 
-    public function deleteNotifications(Request $request)
+    public function deleteNotifications(Request $request): JsonResponse
     {
         $request->user()->notifications()->delete();
 

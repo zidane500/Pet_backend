@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -11,10 +12,10 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             VetSeeder::class,
             PetStoreSeeder::class,
+            ShelterSeeder::class,
+            BreederSeeder::class,
             ListingSeeder::class,
             LostFoundSeeder::class,
         ]);
-
-        $this->command->info('🎉 Base de données remplie avec succès !');
     }
 }
