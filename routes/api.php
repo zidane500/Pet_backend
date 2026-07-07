@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\AdminController;
 
 // ─── Auth publique ────────────────────────────────────────────
 Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
@@ -101,4 +102,26 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     // Upload photos
     Route::post('/upload',           [UploadController::class, 'store'])->middleware('throttle:20,1');
+});
+
+// ─── Routes Admin (auth + role admin requis) ──────────────────
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+
+    // Statistiques globales
+    Route::get('/stats',                          [AdminController::class, 'stats']);
+
+    // CRUD Utilisateurs
+    Route::get('/users',                          [AdminController::class, 'users']);
+    Route::get('/users/{id}',                     [AdminController::class, 'showUser']);
+    Route::post('/users',                         [AdminController::class, 'createUser']);
+    Route::put('/users/{id}',                     [AdminController::class, 'updateUser']);
+    Route::delete('/users/{id}',                  [AdminController::class, 'deleteUser']);
+    Route::post('/users/{id}/ban',                [AdminController::class, 'banUser']);
+    Route::post('/users/{id}/unban',              [AdminController::class, 'unbanUser']);
+    Route::post('/users/{id}/verify',             [AdminController::class, 'verifyUser']);
+
+    // CRUD Annonces
+    Route::get('/listings',                       [AdminController::class, 'listings']);
+    Route::delete('/listings/{id}',               [AdminController::class, 'deleteListing']);
+    Route::patch('/listings/{id}/toggle',         [AdminController::class, 'toggleListingActive']);
 });

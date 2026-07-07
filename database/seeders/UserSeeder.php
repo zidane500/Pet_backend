@@ -10,6 +10,13 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
+            [
+                'name'  => 'Super Admin',
+                'email' => 'admin@petverse.com',
+                'role'  => 'admin',
+                'city'  => 'Tunis',
+                'plan'  => 'pro',
+            ],
             ['name' => 'Ahmed Ben Ali',     'email' => 'ahmed@test.tn',   'role' => 'owner',   'city' => 'Tunis'],
             ['name' => 'Fatma Trabelsi',    'email' => 'fatma@test.tn',   'role' => 'owner',   'city' => 'Sfax'],
             ['name' => 'Dr. Karim Mansour', 'email' => 'vet@test.tn',     'role' => 'vet',     'city' => 'Tunis'],
