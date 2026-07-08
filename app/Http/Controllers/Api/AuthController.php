@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -13,8 +14,8 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     public function register(RegisterRequest $request)
-{
-    $data = $request->validated();
+    {
+        $data = $request->validated();
 
         $user = User::create([
             ...$data,
@@ -30,8 +31,8 @@ class AuthController extends Controller
     }
 
     public function login(LoginRequest $request)
-{
-    $data = $request->validated();
+    {
+        $data = $request->validated();
 
         $user = User::where('email', $data['email'])->first();
 
@@ -45,6 +46,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'Compte désactivé.'], 403);
         }
 
+        // Une seule session active à la fois : déconnecte les anciennes
+        $user->tokens()->delete();
+
         $token = $user->createToken('petconnect')->plainTextToken;
 
         return response()->json([
@@ -53,10 +57,18 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Déconnexion : supprime TOUS les tokens de l'utilisateur
+     * → Le token ne peut plus être réutilisé, même s'il a été volé
+     */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Déconnecté avec succès.']);
+        // Supprime TOUS les tokens de l'utilisateur (pas juste le current)
+        $request->user()->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Déconnecté avec succès. Tous les tokens ont été révoqués.'
+        ]);
     }
 
     public function me(Request $request)
@@ -85,6 +97,7 @@ class AuthController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
                 $user->forceFill(['password' => Hash::make($password)])->save();
+                // Supprime tous les tokens au reset du password
                 $user->tokens()->delete();
             }
         );
