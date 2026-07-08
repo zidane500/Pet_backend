@@ -37,12 +37,19 @@ class MessageController extends Controller
             ->map(function ($thread) use ($userId) {
                 /** @var Message $lastMessage */
                 $lastMessage = $thread->sortByDesc('created_at')->first();
+
+                // ── Protection contre les utilisateurs supprimés ──
                 $partner = $lastMessage->sender_id === $userId
                     ? $lastMessage->receiver
                     : $lastMessage->sender;
 
+                // Si le partenaire n'existe plus, on ignore cette conversation
+                if (! $partner) {
+                    return null;
+                }
+
                 return [
-                    'partner' => $partner,
+                    'partner'      => $partner,
                     'last_message' => $lastMessage,
                     'unread_count' => $thread
                         ->where('receiver_id', $userId)
@@ -50,6 +57,7 @@ class MessageController extends Controller
                         ->count(),
                 ];
             })
+            ->filter() // supprime les null
             ->sortByDesc(fn ($conversation) => $conversation['last_message']->created_at)
             ->values();
 
@@ -63,11 +71,17 @@ class MessageController extends Controller
         if ($me === $userId) {
             return response()->json([
                 'message' => 'Conversation invalide.',
-                'code' => 'INVALID_CONVERSATION',
+                'code'    => 'INVALID_CONVERSATION',
             ], 422);
         }
 
-        User::query()->whereKey($userId)->where('is_active', true)->firstOrFail();
+        // ── Cherche l'utilisateur même s'il est soft-deleted ──
+        $partner = User::withTrashed()->find($userId);
+        if (! $partner) {
+            return response()->json([
+                'message' => 'Utilisateur introuvable.',
+            ], 404);
+        }
 
         $messages = Message::query()
             ->where(function ($query) use ($me, $userId) {
@@ -85,6 +99,7 @@ class MessageController extends Controller
             ->limit(250)
             ->get();
 
+        // Marquer les messages reçus comme lus
         Message::query()
             ->where('sender_id', $userId)
             ->where('receiver_id', $me)
@@ -112,10 +127,10 @@ class MessageController extends Controller
 
         $message = DB::transaction(function () use ($request, $data, $receiver) {
             return Message::query()->create([
-                'sender_id' => $request->user()->id,
+                'sender_id'   => $request->user()->id,
                 'receiver_id' => $receiver->id,
-                'content' => $data['content'],
-                'listing_id' => $data['listing_id'] ?? null,
+                'content'     => $data['content'],
+                'listing_id'  => $data['listing_id'] ?? null,
             ]);
         });
 
