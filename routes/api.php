@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\OrderController;
 
 // ─── Auth publique ────────────────────────────────────────────
 Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
@@ -41,6 +43,10 @@ Route::get('/breeders',              [BreederController::class, 'index']);
 Route::get('/breeders/{id}',         [BreederController::class, 'show']);
 
 Route::get('/users/{id}',            [UserController::class, 'show']);
+
+// ← Boutique : catalogue public, consultable sans compte
+Route::get('/products',              [ProductController::class, 'index']);
+Route::get('/products/{id}',         [ProductController::class, 'show']);
 
 // ─── Protégées (token requis) ─────────────────────────────────
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
@@ -85,6 +91,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::delete('/notifications',                [UserController::class, 'deleteNotifications'])->middleware('throttle:10,1');
 
     Route::post('/upload',           [UploadController::class, 'store'])->middleware('throttle:20,1');
+
+    // ← Boutique : passer commande nécessite un compte (paiement à la
+    // livraison, l'admin contacte le client ensuite).
+    Route::post('/orders',           [OrderController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/my-orders',         [OrderController::class, 'myOrders'])->middleware('throttle:60,1');
+    Route::get('/orders/{id}',       [OrderController::class, 'show'])->whereNumber('id')->middleware('throttle:60,1');
 });
 
 // ─── Routes Admin ─────────────────────────────────────────────
@@ -101,4 +113,15 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/listings',                       [AdminController::class, 'listings']);
     Route::delete('/listings/{id}',               [AdminController::class, 'deleteListing']);
     Route::patch('/listings/{id}/toggle',         [AdminController::class, 'toggleListingActive']);
+
+    // ← Boutique : gestion des produits (création réservée à l'admin)
+    Route::get('/products',                       [AdminController::class, 'products']);
+    Route::post('/products',                      [AdminController::class, 'createProduct']);
+    Route::put('/products/{id}',                  [AdminController::class, 'updateProduct']);
+    Route::patch('/products/{id}/toggle',         [AdminController::class, 'toggleProductActive']);
+    Route::delete('/products/{id}',               [AdminController::class, 'deleteProduct']);
+
+    // ← Boutique : suivi et traitement des commandes
+    Route::get('/orders',                         [AdminController::class, 'orders']);
+    Route::patch('/orders/{id}/status',            [AdminController::class, 'updateOrderStatus']);
 });

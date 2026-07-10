@@ -7,6 +7,10 @@ use App\Models\User;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\LostFound;
+use App\Models\Product;
+use App\Models\Order;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -292,6 +296,115 @@ class AdminController extends Controller
         return response()->json([
             'message'   => $listing->is_active ? 'Annonce activée.' : 'Annonce désactivée.',
             'is_active' => $listing->is_active,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  CRUD PRODUITS (boutique) — création réservée à l'admin
+    // ─────────────────────────────────────────────────────────────
+
+    public function products(Request $request): JsonResponse
+    {
+        $perPage = min(max((int) $request->integer('per_page', 20), 1), 100);
+
+        // ← withTrashed : l'admin voit aussi les produits supprimés
+        // récemment (utile pour vérifier avant suppression définitive).
+        $query = Product::withTrashed()->orderByDesc('created_at');
+
+        if ($request->filled('search')) {
+            $query->where('name', 'ilike', '%' . $request->input('search') . '%');
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category', $request->input('category'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->input('status') === 'active');
+        }
+
+        return response()->json($query->paginate($perPage));
+    }
+
+    public function createProduct(StoreProductRequest $request): JsonResponse
+    {
+        $product = Product::create([
+            ...$request->validated(),
+            'created_by'  => $request->user()->id,
+            'is_active'   => $request->validated()['is_active'] ?? true,
+            'views_count' => 0,
+        ]);
+
+        return response()->json($product, 201);
+    }
+
+    public function updateProduct(UpdateProductRequest $request, $id): JsonResponse
+    {
+        $product = Product::findOrFail($id);
+        $product->update($request->validated());
+
+        return response()->json($product->fresh());
+    }
+
+    public function toggleProductActive($id): JsonResponse
+    {
+        $product = Product::findOrFail($id);
+        $product->update(['is_active' => !$product->is_active]);
+
+        return response()->json([
+            'message'   => $product->is_active ? 'Produit activé.' : 'Produit désactivé.',
+            'is_active' => $product->is_active,
+        ]);
+    }
+
+    public function deleteProduct($id): JsonResponse
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+        $product->forceDelete();
+
+        return response()->json(['message' => 'Produit supprimé définitivement.']);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  GESTION DES COMMANDES (paiement à la livraison)
+    // ─────────────────────────────────────────────────────────────
+
+    public function orders(Request $request): JsonResponse
+    {
+        $perPage = min(max((int) $request->integer('per_page', 20), 1), 100);
+
+        $query = Order::with(['user:id,name,email,phone', 'items'])
+            ->orderByDesc('created_at');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('shipping_name', 'ilike', "%{$search}%")
+                    ->orWhere('shipping_phone', 'ilike', "%{$search}%");
+            });
+        }
+
+        return response()->json($query->paginate($perPage));
+    }
+
+    public function updateOrderStatus(Request $request, $id): JsonResponse
+    {
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'status'      => ['required', Rule::in(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])],
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $order->update($validated);
+
+        return response()->json([
+            'message' => 'Statut de la commande mis à jour.',
+            'order'   => $order->fresh(),
         ]);
     }
 }
