@@ -58,13 +58,17 @@ class OrderController extends Controller
                     ]);
                 }
 
-                $subtotal = $product->price * $quantity;
+                // ← Utilise effective_price (qui tient compte d'une
+                // promotion active), jamais price directement — sinon
+                // le client paierait le prix normal même si une promo
+                // est affichée sur le site.
+                $subtotal = $product->effective_price * $quantity;
                 $total += $subtotal;
 
                 $orderItemsData[] = [
                     'product_id'   => $product->id,
                     'product_name' => $product->name,
-                    'unit_price'   => $product->price,
+                    'unit_price'   => $product->effective_price,
                     'quantity'     => $quantity,
                     'subtotal'     => $subtotal,
                 ];

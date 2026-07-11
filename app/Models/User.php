@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Notifications\ResetPasswordNotification;
 
 class User extends Authenticatable
 {
@@ -50,4 +51,14 @@ class User extends Authenticatable
     public function lostFoundReports() {
     return $this->hasMany(LostFound::class);
 }
+
+    // ← Sans cette méthode, Password::sendResetLink() utiliserait la
+    // notification par défaut de Laravel, qui pointe vers une route
+    // nommée "password.reset" inexistante dans cette app API-only, et
+    // planterait. On la remplace par notre propre notification qui
+    // pointe vers la page /reset-password du frontend React.
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
 }
