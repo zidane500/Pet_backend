@@ -10,12 +10,14 @@ class Product extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = [
+       protected $fillable = [
         'created_by',
         'name',
         'description',
         'category',
         'price',
+        'promotion_price',
+        'promotion_ends_at',
         'stock_quantity',
         'photos',
         'is_active',
@@ -25,6 +27,8 @@ class Product extends Model
     protected $casts = [
         'photos' => 'array',
         'price' => 'decimal:2',
+        'promotion_price' => 'decimal:2',
+        'promotion_ends_at' => 'datetime',
         'stock_quantity' => 'integer',
         'is_active' => 'boolean',
         'views_count' => 'integer',
