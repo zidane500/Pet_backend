@@ -59,7 +59,17 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json(['message' => 'Trop de requêtes.', 'code' => 'TOO_MANY_REQUESTS'], 429);
+                // ← Laravel calcule déjà le temps d'attente et le met
+                // dans l'en-tête HTTP "Retry-After" de l'exception —
+                // on le récupère ici pour l'inclure dans le corps JSON
+                // (le header seul n'était pas exploité côté frontend).
+                $retryAfter = $e->getHeaders()['Retry-After'] ?? null;
+
+                return response()->json([
+                    'message' => 'Trop de requêtes.',
+                    'code' => 'TOO_MANY_REQUESTS',
+                    'retry_after' => $retryAfter !== null ? (int) $retryAfter : null,
+                ], 429);
             }
         });
         $exceptions->render(function (\Throwable $e, $request) {

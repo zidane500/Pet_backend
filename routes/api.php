@@ -18,11 +18,11 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\OrderController;
 
 // ─── Auth publique ────────────────────────────────────────────
-Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
-    Route::post('/register',         [AuthController::class, 'register'])->middleware('throttle:5,1');
-    Route::post('/login',            [AuthController::class, 'login'])->middleware('throttle:5,1');
-    Route::post('/forgot-password',  [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
-    Route::post('/reset-password',   [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
+Route::prefix('auth')->middleware('throttle:20,1,auth-group')->group(function () {
+    Route::post('/register',         [AuthController::class, 'register'])->middleware('throttle:3,1,register');
+    Route::post('/login',            [AuthController::class, 'login'])->middleware('throttle:4,1,login');
+    Route::post('/forgot-password',  [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1,forgot-password');
+    Route::post('/reset-password',   [AuthController::class, 'resetPassword'])->middleware('throttle:3,1,reset-password');
 });
 
 // ─── Publiques (lecture seule) ────────────────────────────────
